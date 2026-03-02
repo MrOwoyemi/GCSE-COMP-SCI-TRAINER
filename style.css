@@ -425,3 +425,30 @@ body {
         opacity: 0.5;
     }
 }
+
+#rank-up-overlay {
+    position: absolute;
+    top: 10px; /* Aligns over the header */
+    left: 20px;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+#terminal-box {
+    background: #000;
+    border: 1px solid #2ecc71;
+    padding: 10px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.8rem;
+    color: #2ecc71;
+    box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+    min-width: 250px;
+}
+
+.cursor {
+    animation: blink 0.8s infinite;
+}
+
+@keyframes blink {
+    50% { opacity: 0; }
+}
