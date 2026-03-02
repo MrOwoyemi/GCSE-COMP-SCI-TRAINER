@@ -647,7 +647,8 @@ let timer;
 let timeLeft = 30;
 let isTestMode = false;
 let currentStreak = 0;
-let totalXP = 0;
+// Load data from localStorage or use defaults
+let totalXP = parseInt(localStorage.getItem('totalXP')) || 0;
 let userLevel = 1;
 const XP_PER_LEVEL = 1000;
 
@@ -667,6 +668,89 @@ let solvedGroups = 0;
 let currentWallData = [];
 let guessingPhase = false;
 let currentGuessIndex = 0;
+
+
+
+function triggerTerminalRankUp(newRank) {
+    const overlay = document.getElementById('rank-up-overlay');
+    const textEl = document.getElementById('terminal-text');
+    overlay.classList.remove('hidden');
+    
+    const fullText = `C:\\> ACCESS_GRANTED... NEW_RANK: [${newRank}]`;
+    let i = 0;
+    textEl.innerText = "";
+
+    // Typewriter effect
+    const typer = setInterval(() => {
+        textEl.innerText += fullText[i];
+        i++;
+        if (i >= fullText.length) {
+            clearInterval(typer);
+            // Wait 2 seconds then hide
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 2000);
+        }
+    }, 50);
+}
+
+
+// Rank changes every 15 levels
+const getRank = (level) => {
+    if (level >= 75) return { name: "S", color: "#f1c40f" }; // Highest Rank
+    if (level >= 60) return { name: "A", color: "#2ecc71" };
+    if (level >= 45) return { name: "B", color: "#3498db" };
+    if (level >= 30) return { name: "C", color: "#9b59b6" };
+    if (level >= 15) return { name: "D", color: "#e67e22" };
+    return { name: "F", color: "#95a5a6" };
+};
+
+// Each level requires 10% more XP than the previous one
+const getLevelData = (xp) => {
+    let level = 1;
+    let xpRequiredForNext = 100; // Requirement for LVL 1 -> 2
+    let tempXP = xp;
+
+    while (tempXP >= xpRequiredForNext) {
+        tempXP -= xpRequiredForNext;
+        level++;
+        // The 10% increase per level requested
+        xpRequiredForNext = Math.floor(xpRequiredForNext * 1.1); 
+    }
+    // currentLevelXP is the progress within the current level
+    return { level, currentLevelXP: tempXP, nextLevelXP: xpRequiredForNext };
+};
+
+// Add this to your top-level state variables
+let lastRankName = getRank(getLevelData(totalXP).level).name;
+
+function updateGlobalUI() {
+    const data = getLevelData(totalXP);
+    const rank = getRank(data.level);
+
+    // DELETE THIS LINE: 
+    // if (xpBar) xpBar.style.width = `${xpPercentage}%`; 
+
+    // Check for Rank Change
+    if (rank.name !== lastRankName) {
+        triggerTerminalRankUp(rank.name);
+        lastRankName = rank.name;
+    }
+
+    const lvlDisplay = document.getElementById('level-display');
+    const xpBar = document.getElementById('xp-bar-fill'); // It is defined here!
+
+    if (lvlDisplay) {
+        lvlDisplay.innerText = `LVL ${data.level} (${rank.name})`;
+        lvlDisplay.style.color = rank.color; 
+    }
+    
+    if (xpBar) {
+        xpBar.style.width = `${(data.currentLevelXP / data.nextLevelXP) * 100}%`;
+    }
+    
+    localStorage.setItem('totalXP', totalXP);
+}
 
 /**
  * INITIALISATION & NAVIGATION
@@ -779,9 +863,9 @@ function showHint() {
 }
 
 function nextQuestion() {
-    // FIX: Removed the logic that forced currentIndex back to 0
+    // Check if we have reached the end of the question set
     if (currentIndex >= currentQuestions.length) {
-        showResults();
+        showResults(); // This was missing a proper implementation
         return;
     }
 
@@ -797,14 +881,12 @@ function nextQuestion() {
 
     renderOptions(qData);
 
-    // Reset the Hint Button for the new question
     const hintBtn = document.getElementById('hint-btn');
     if (hintBtn) {
         hintBtn.disabled = false;
-        hintBtn.style.display = 'inline-block'; // Ensure it's visible
+        hintBtn.style.display = 'inline-block';
     }
 
-    // Reset the start time for THIS specific question
     timeWhenQuestionStarted = Date.now();
     currentIndex++;
 }
@@ -835,27 +917,32 @@ function handleAnswer(choice, correct, why) {
 
     if (isCorrect) {
         score++;
+        totalXP += 50; // Award XP immediately
+        localStorage.setItem('totalXP', totalXP); // Force save to browser memory
+        updateGlobalUI(); // Force immediate visual update of the bar and level
+        
         if (isBossMode) {
             let multiplier = currentDifficulty === 'HARD' ? 5 : (currentDifficulty === 'MEDIUM' ? 2.5 : 1);
             let regen = Math.max(1, Math.floor(timeTaken * multiplier));
-
-            bossHP -= 25;
-            bossHP = Math.min(bossMaxHP, bossHP + regen);
-
-            f.innerHTML = `✅ HIT! -25 HP. <br>⚠️ Boss regenerated ${regen} HP.`;
-            updateBossUI();
-
+            
+            bossHP -= 25; // Apply damage first
+            
             if (bossHP <= 0) {
-                bossHP = 0;
+                // Boss is dead! Do not allow regen.
+                bossHP = 0; 
+                f.innerHTML = `✅ FATAL BLOW! -25 HP.`;
                 updateBossUI();
-                victorySequence(); // Go to Rank screen
+                victorySequence();
                 return;
+            } else {
+                // Boss survived, so they get to regenerate
+                bossHP = Math.min(bossMaxHP, bossHP + regen);
+                f.innerHTML = `✅ HIT! -25 HP. <br>⚠️ Boss regenerated ${regen} HP.`;
+                updateBossUI();
             }
         }
     } else {
-        // INCREMENT WRONG COUNTER
         totalWrongAnswers++;
-
         if (isBossMode) {
             let missHeal = currentDifficulty === 'HARD' ? 40 : (currentDifficulty === 'MEDIUM' ? 30 : 20);
             bossHP = Math.min(bossMaxHP, bossHP + missHeal);
@@ -864,6 +951,26 @@ function handleAnswer(choice, correct, why) {
         }
     }
     document.getElementById('continue-btn').classList.remove('hidden');
+}
+
+function showResults() {
+    // 1. Calculate stats BEFORE resetting the score variable
+    const totalQuestions = currentQuestions.length;
+    const accuracy = totalQuestions > 0 ? ((score / totalQuestions) * 100).toFixed(1) : 0;
+    const finalScore = score;
+
+    // 2. Clear the UI screens, but the local variables above preserve the data
+    resetState(); 
+
+    // 3. Reveal the results area
+    document.getElementById('results-area').classList.remove('hidden');
+    
+    // 4. Update the text with the preserved data
+    document.getElementById('final-score-text').innerHTML = 
+        `You scored <b>${finalScore}</b> out of <b>${totalQuestions}</b><br>Accuracy: <b>${accuracy}%</b>`;
+
+    // 5. Update XP based on the session performance
+    updateXP(finalScore * 10);
 }
 
 function victorySequence() {
@@ -1125,10 +1232,10 @@ function updateBossUI() {
 }
 function updateXP(amount) {
     totalXP += amount;
-    userLevel = Math.floor(totalXP / XP_PER_LEVEL) + 1;
-    document.getElementById('level-display').innerText = `LVL ${userLevel}`;
-    document.getElementById('xp-bar-fill').style.width = `${((totalXP % XP_PER_LEVEL) / XP_PER_LEVEL) * 100}%`;
+    // Let your main UI function do all the heavy lifting!
+    updateGlobalUI(); 
 }
+
 function updateStreakUI() { document.getElementById('streak-display').innerText = (currentStreak >= 2) ? `🔥 ${currentStreak} STREAK` : ""; }
 
 function startBossBattle(difficulty) {
@@ -1301,4 +1408,6 @@ function startLogicSimulator() {
     nextQuestion();
 }
 
-initMenu();
+initMenu(); // This must be at the global level
+// Call this at the very end of script.js to initialize the homepage
+updateGlobalUI();
