@@ -787,7 +787,8 @@ function resetState() {
     // Force hide every major screen to prevent splitting
     const screens = [
         'main-menu', 'quiz-area', 'results-area', 'boss-difficulty-menu',
-        'wall-area', 'wall-selection-menu', 'logic-sim-area', 'header-info', 'progress-wrapper'
+        'wall-area', 'wall-selection-menu', 'logic-sim-area', 'header-info', 'progress-wrapper',
+        'parsons-selection-menu', 'parsons-area' // <-- Ensure both are here
     ];
     screens.forEach(id => {
         const el = document.getElementById(id);
@@ -836,59 +837,148 @@ function startSession(mode) {
 }
 
 function showHint() {
-    const qData = currentQuestions[currentIndex - 1]; // Use currentIndex-1 as it was incremented in nextQuestion
+    const simArea = document.getElementById('logic-sim-area');
+    
+    // Check if Logic Lab is currently visible
+    if (!simArea.classList.contains('hidden')) {
+        const f = document.getElementById('feedback-area');
+        
+        // Centered reference tables for the Hint
+        f.innerHTML = `
+            <div class="hint-tables-container fade-in" style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 25px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 10px;">
+                <table class="logic-table" style="font-size: 0.9rem; border: 1px solid #2ecc71;">
+                    <tr><th colspan="2" style="background: #16a085;">AND (.)</th></tr>
+                    <tr><td>0 . 0</td><td>0</td></tr><tr><td>0 . 1</td><td>0</td></tr>
+                    <tr><td>1 . 0</td><td>0</td></tr><tr><td>1 . 1</td><td>1</td></tr>
+                </table>
+                <table class="logic-table" style="font-size: 0.9rem; border: 1px solid #3498db;">
+                    <tr><th colspan="2" style="background: #2980b9;">OR (+)</th></tr>
+                    <tr><td>0 + 0</td><td>0</td></tr><tr><td>0 + 1</td><td>1</td></tr>
+                    <tr><td>1 + 0</td><td>1</td></tr><tr><td>1 + 1</td><td>1</td></tr>
+                </table>
+                <table class="logic-table" style="font-size: 0.9rem; border: 1px solid #f1c40f;">
+                    <tr><th colspan="2" style="background: #d35400;">NOT (¬)</th></tr>
+                    <tr><td>¬0</td><td>1</td></tr><tr><td>¬1</td><td>0</td></tr>
+                </table>
+            </div>
+        `;
+        return; 
+    }
+
+    // Standard MCQ hint logic for other sections
+    const qData = currentQuestions[currentIndex - 1];
     const correctAns = qData.a;
     const buttons = Array.from(document.querySelectorAll('.option-btn'));
-
-    // Filter buttons to find those that are currently visible and incorrect
-    const wrongButtons = buttons.filter(btn =>
-        btn.innerText !== correctAns &&
-        btn.style.visibility !== 'hidden' &&
-        btn.disabled === false
-    );
+    const wrongButtons = buttons.filter(btn => btn.innerText !== correctAns && btn.style.visibility !== 'hidden');
 
     if (wrongButtons.length > 0) {
-        // Randomly pick one incorrect button to hide
-        const randomIndex = Math.floor(Math.random() * wrongButtons.length);
-        const targetButton = wrongButtons[randomIndex];
-
-        // "Black out" the button
+        const targetButton = wrongButtons[Math.floor(Math.random() * wrongButtons.length)];
         targetButton.style.visibility = 'hidden';
-        targetButton.disabled = true;
-
-        // Disable hint button so it can only be used once per question
         const hintBtn = document.getElementById('hint-btn');
         if (hintBtn) hintBtn.disabled = true;
     }
 }
 
 function nextQuestion() {
-    // Check if we have reached the end of the question set
     if (currentIndex >= currentQuestions.length) {
-        showResults(); // This was missing a proper implementation
+        showResults();
         return;
     }
 
     const qData = currentQuestions[currentIndex];
+    const simArea = document.getElementById('logic-sim-area');
+    const optionsContainer = document.getElementById('options-container');
 
     // UI Resets
     document.getElementById('question-text').innerText = qData.q;
     document.getElementById('feedback-area').innerHTML = '';
     document.getElementById('continue-btn').classList.add('hidden');
-
-    // Progress Bar
     document.getElementById('progress-bar').style.width = `${((currentIndex + 1) / currentQuestions.length) * 100}%`;
 
-    renderOptions(qData);
+    // Logic for handling different question types
+    if (qData.type === "table") {
+        optionsContainer.innerHTML = ''; // Hide standard buttons
+        simArea.classList.remove('hidden');
+        renderLogicTable(qData);
+    } else {
+        simArea.classList.add('hidden'); // Hide tables for standard MCQs
+        renderOptions(qData);
+    }
 
     const hintBtn = document.getElementById('hint-btn');
-    if (hintBtn) {
-        hintBtn.disabled = false;
-        hintBtn.style.display = 'inline-block';
-    }
+    if (hintBtn) hintBtn.disabled = false;
 
     timeWhenQuestionStarted = Date.now();
     currentIndex++;
+}
+
+function renderLogicTable(qData) {
+    const simArea = document.getElementById('logic-sim-area');
+    
+    simArea.innerHTML = '';
+
+    let tableHtml = `
+        <div class="logic-lab-wrapper" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh; width: 100%; margin: 20px 0;">
+            <div class="logic-flex-container fade-in" style="width: 100%; max-width: 600px;">
+                <table class="logic-table" style="width: 100%; border-collapse: collapse; margin-bottom: 25px; background: rgba(0, 0, 0, 0.4);">
+                    <thead>
+                        <tr>
+                            <th style="padding: 12px; border: 1px solid #444; color: var(--logic-gold); text-align: center;">Inputs</th>
+                            <th style="padding: 12px; border: 1px solid #444; color: var(--logic-gold); text-align: center;">Output Q</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+
+    qData.rows.forEach((row, i) => {
+        tableHtml += `
+            <tr>
+                <td style="padding: 12px; border: 1px solid #444; text-align: center; font-family: monospace;">${row.inputs}</td>
+                <td style="padding: 12px; border: 1px solid #444; text-align: center;">
+                    <input type="text" class="table-input" id="row-${i}" maxlength="1" 
+                    style="width: 45px; height: 35px; text-align: center; background: #1e272e; color: white; border: 1px solid #555; font-size: 1.1rem; border-radius: 4px; display: inline-block;">
+                </td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `
+                    </tbody>
+                </table>
+            </div>
+            <button class="mock-btn p1-btn" style="width: 220px; height: 60px; font-size: 1.2rem; display: block; margin: 0 auto;" onclick="checkLogicTable()">CHECK TABLE</button>
+        </div>
+    `;
+    
+    simArea.innerHTML = tableHtml;
+}
+
+function checkLogicTable() {
+    const qData = currentQuestions[currentIndex - 1];
+    let allCorrect = true;
+
+    qData.rows.forEach((row, i) => {
+        const input = document.getElementById(`row-${i}`);
+        if (input.value !== row.correct) {
+            allCorrect = false;
+            input.style.borderColor = "var(--wrong)";
+        } else {
+            input.style.borderColor = "var(--correct)";
+        }
+        input.disabled = true;
+    });
+
+    const f = document.getElementById('feedback-area');
+    if (allCorrect) {
+        score++;
+        totalXP += 100;
+        f.innerHTML = "✅ PERFECT! Truth table completed correctly.";
+        updateGlobalUI();
+    } else {
+        f.innerHTML = `❌ Incorrect. ${qData.why}`;
+    }
+    
+    document.getElementById('continue-btn').classList.remove('hidden');
 }
 
 function renderOptions(qData) {
@@ -1030,61 +1120,111 @@ const wallBank = {
         { cat: "Flowchart Symbols", items: ["Diamond", "Parallelogram", "Rectangle", "Oval"] },
         { cat: "Searching Algorithms", items: ["Linear", "Binary", "Search Area", "Middle Item"] },
         { cat: "Sorting Algorithms", items: ["Bubble", "Merge", "Insertion", "Divide and Conquer"] },
-        { cat: "Computational Thinking", items: ["Abstraction", "Decomposition", "Algorithmic Thinking", "Pattern Recognition"] }
+        { cat: "Computational Thinking", items: ["Abstraction", "Decomposition", "Algorithmic Thinking", "Pattern Recognition"] },
+        // NEW
+        { cat: "Algorithm Efficiency", items: ["Time", "Space", "Comparisons", "Passes"] },
+        { cat: "Trace Table Columns", items: ["Variables", "Output", "Conditions", "Iterations"] },
+        { cat: "Boolean Logic", items: ["AND", "OR", "NOT", "XOR"] },
+        { cat: "Algorithm Inputs", items: ["Data", "Parameters", "Values", "Sensors"] }
     ],
     '3.2': [
         { cat: "Basic Data Types", items: ["Integer", "Real", "Boolean", "String"] },
         { cat: "Arithmetic Operators", items: ["MOD", "DIV", "Exponentiation", "Quotient"] },
         { cat: "Programming Constructs", items: ["Sequence", "Selection", "Iteration", "Condition"] },
-        { cat: "Subroutine Components", items: ["Parameters", "Arguments", "Return Value", "Local Variables"] }
+        { cat: "Subroutine Components", items: ["Parameters", "Arguments", "Return Value", "Local Variables"] },
+        // NEW
+        { cat: "String Manipulation", items: ["Length", "Substring", "Upper", "Lower"] },
+        { cat: "Error Types", items: ["Syntax", "Runtime", "Logic", "Compilation"] },
+        { cat: "Variable Scope", items: ["Global", "Local", "Static", "Block"] },
+        { cat: "File Handling", items: ["Open", "Read", "Write", "Close"] }
     ],
     '3.3': [
         { cat: "Units of Information", items: ["Petabyte", "Terabyte", "Nibble", "Byte"] },
         { cat: "Character Encoding", items: ["ASCII", "Unicode", "Character Set", "7-bit"] },
         { cat: "Image Representation", items: ["Resolution", "Colour Depth", "Metadata", "Pixel"] },
-        { cat: "Sound Representation", items: ["Sample Rate", "Bit Depth", "Hertz", "Amplitude"] }
+        { cat: "Sound Representation", items: ["Sample Rate", "Bit Depth", "Hertz", "Amplitude"] },
+        // NEW
+        { cat: "Compression Types", items: ["Lossy", "Lossless", "Run-length", "Huffman"] },
+        { cat: "Binary Arithmetic", items: ["Addition", "Shift Left", "Shift Right", "Overflow"] },
+        { cat: "Number Bases", items: ["Binary", "Denary", "Hexadecimal", "Base-10"] },
+        { cat: "Hexadecimal Uses", items: ["MAC Addresses", "Color Codes", "Memory Dumps", "IPv6"] }
     ],
     '3.4': [
         { cat: "Hardware Components", items: ["Motherboard", "CPU", "NIC", "Hard Drive"] },
         { cat: "CPU Components", items: ["Control Unit", "ALU", "Cache", "Clock"] },
         { cat: "Primary Memory", items: ["RAM", "ROM", "Virtual Memory", "Registers"] },
-        { cat: "Secondary Storage", items: ["Magnetic", "Optical", "Solid State", "Cloud"] }
+        { cat: "Secondary Storage", items: ["Magnetic", "Optical", "Solid State", "Cloud"] },
+        // NEW
+        { cat: "FDE Cycle", items: ["Fetch", "Decode", "Execute", "Instruction"] },
+        { cat: "CPU Performance", items: ["Clock Speed", "Cores", "Cache Size", "Bus Width"] },
+        { cat: "Software Types", items: ["Operating System", "Utility", "Application", "Firmware"] },
+        { cat: "OS Functions", items: ["Memory Management", "File Management", "User Interface", "Peripheral Management"] }
     ],
     '3.5': [
         { cat: "Network Topologies", items: ["Star", "Bus", "Full Mesh", "Partial Mesh"] },
         { cat: "Network Hardware", items: ["Router", "Switch", "NIC", "Hub"] },
         { cat: "Email Protocols", items: ["SMTP", "IMAP", "POP3", "Mail Server"] },
-        { cat: "Web & Transfer Protocols", items: ["HTTP", "HTTPS", "FTP", "TCP/IP"] }
+        { cat: "Web & Transfer Protocols", items: ["HTTP", "HTTPS", "FTP", "TCP/IP"] },
+        // NEW
+        { cat: "Network Types", items: ["LAN", "WAN", "PAN", "VPN"] },
+        { cat: "Wireless Networking", items: ["Wi-Fi", "Bluetooth", "WAP", "Frequencies"] },
+        { cat: "Network Layers", items: ["Application", "Transport", "Internet", "Link"] },
+        { cat: "Hosting & Web", items: ["Client-Server", "Peer-to-Peer", "DNS", "Web Server"] }
     ],
     '3.6': [
         { cat: "Social Engineering", items: ["Phishing", "Blagging", "Shoulder Surfing", "Pretexting"] },
         { cat: "Malware Types", items: ["Trojan Horse", "Ransomware", "Spyware", "Worm"] },
         { cat: "Technical Prevention", items: ["Firewall", "Encryption", "Authentication", "MAC Filtering"] },
-        { cat: "Security Testing", items: ["Black-box", "White-box", "Vulnerability", "Penetration"] }
+        { cat: "Security Testing", items: ["Black-box", "White-box", "Vulnerability", "Penetration"] },
+        // NEW
+        { cat: "Network Threats", items: ["SQL Injection", "DDoS", "Packet Sniffing", "Man-in-the-Middle"] },
+        { cat: "Biometric Authentication", items: ["Fingerprint", "Retina", "Voice", "Facial"] },
+        { cat: "Cyber Attack Motives", items: ["Financial", "Political", "Disruption", "Espionage"] },
+        { cat: "Vulnerabilities", items: ["Unpatched Software", "Weak Passwords", "Misconfiguration", "USB Drops"] }
     ],
     '3.7': [
         { cat: "Database Components", items: ["Table", "Record", "Field", "Data Type"] },
         { cat: "Relationship Keys", items: ["Primary Key", "Foreign Key", "Unique ID", "Link Field"] },
         { cat: "SQL Data Manipulation", items: ["INSERT INTO", "UPDATE", "DELETE FROM", "CREATE TABLE"] },
-        { cat: "SQL Retrieval Commands", items: ["SELECT", "FROM", "WHERE", "ORDER BY"] }
+        { cat: "SQL Retrieval Commands", items: ["SELECT", "FROM", "WHERE", "ORDER BY"] },
+        // NEW
+        { cat: "Data Validation", items: ["Length Check", "Presence Check", "Format Check", "Range Check"] },
+        { cat: "SQL Data Types", items: ["VARCHAR", "INTEGER", "BOOLEAN", "DATE"] },
+        { cat: "Database Security", items: ["Access Rights", "Passwords", "Encryption", "Views"] },
+        { cat: "Database Concepts", items: ["Relational", "Flat-file", "Query", "Form"] }
     ],
     '3.8': [
         { cat: "Legal Acts (UK Law)", items: ["Computer Misuse", "Data Protection", "Copyright Designs", "Freedom of Info"] },
         { cat: "Environmental Impacts", items: ["E-waste", "Energy Consumption", "Toxic Chemicals", "Cooling Systems"] },
         { cat: "Software Models", items: ["Open Source", "Proprietary", "Free Software", "Closed Source"] },
-        { cat: "Ethical & Privacy Issues", items: ["Digital Divide", "Surveillance", "Data Privacy", "Cyberbullying"] }
+        { cat: "Ethical & Privacy Issues", items: ["Digital Divide", "Surveillance", "Data Privacy", "Cyberbullying"] },
+        // NEW
+        { cat: "Open Source Features", items: ["Free", "Modifiable", "Community Support", "Inspectable"] },
+        { cat: "Proprietary Features", items: ["Paid", "Copyrighted", "Compiled", "Vendor Lock-in"] },
+        { cat: "AI Concerns", items: ["Bias", "Job Replacement", "Accountability", "Deepfakes"] },
+        { cat: "Tech Stakeholders", items: ["Customers", "Employees", "Suppliers", "Local Community"] }
     ],
     'PAPER_1': [
         { cat: "Flowchart Symbols", items: ["Diamond", "Parallelogram", "Rectangle", "Oval"] },
         { cat: "Programming Constructs", items: ["Sequence", "Selection", "Iteration", "Subroutine"] },
         { cat: "Search/Sort Algs", items: ["Bubble", "Merge", "Binary", "Linear"] },
-        { cat: "Computational Thinking", items: ["Abstraction", "Decomposition", "Algorithmic Thinking", "Pattern Recognition"] }
+        { cat: "Computational Thinking", items: ["Abstraction", "Decomposition", "Algorithmic Thinking", "Pattern Recognition"] },
+        // NEW
+        { cat: "Data Representation", items: ["Base-2", "Hexadecimal", "ASCII", "Pixels"] },
+        { cat: "Truth Tables", items: ["1", "0", "True", "False"] },
+        { cat: "Data Types", items: ["Integer", "Real", "Boolean", "String"] },
+        { cat: "Programming Errors", items: ["Syntax", "Logic", "Runtime", "Compilation"] }
     ],
     'PAPER_2': [
-        { cat: "Network Layers (TCP/IP)", items: ["Application", "Transport", "Network", "Data Link"] },
+        { cat: "Network Layers (TCP/IP)", items: ["Application", "Transport", "Internet", "Link"] },
         { cat: "Storage Media", items: ["Magnetic", "Optical", "Solid State", "Cloud"] },
         { cat: "Cyber Security Threats", items: ["Phishing", "Social Engineering", "Brute Force", "DDoS"] },
-        { cat: "Data Validation", items: ["Range Check", "Presence Check", "Format Check", "Length Check"] }
+        { cat: "Data Validation", items: ["Range Check", "Presence Check", "Format Check", "Length Check"] },
+        // NEW
+        { cat: "OS Utilities", items: ["Defragmentation", "Backup", "Compression", "Formatting"] },
+        { cat: "CPU Registers", items: ["MAR", "MDR", "PC", "ACC"] },
+        { cat: "Legislation", items: ["Computer Misuse Act", "GDPR", "Copyright", "FOI"] },
+        { cat: "Environmental", items: ["E-Waste", "Carbon Footprint", "Energy Use", "Toxic Materials"] }
     ]
 };
 
@@ -1099,14 +1239,24 @@ function startConnectingWall(type) {
     document.getElementById('wall-topic-display').innerText = "CONNECTING WALL: " + type;
     document.getElementById('wall-solved-categories').innerHTML = '';
 
-    currentWallData = wallBank[type] || wallBank['PAPER_1'];
+    // 1. Fetch the full list of categories for this topic
+    let fullWallData = wallBank[type] || wallBank['PAPER_1'];
+    
+    // 2. Shuffle the categories randomly and pick exactly 4
+    let shuffledCategories = [...fullWallData].sort(() => Math.random() - 0.5);
+    currentWallData = shuffledCategories.slice(0, 4);
+
     currentWallItems = [];
+    
+    // 3. Build the 16-tile grid using ONLY the 4 chosen categories
     currentWallData.forEach((group, index) => {
         group.items.forEach(item => {
+            // index will now always be 0, 1, 2, or 3
             currentWallItems.push({ text: item, groupId: index, solved: false });
         });
     });
 
+    // 4. Shuffle the 16 individual tiles before displaying them
     currentWallItems.sort(() => Math.random() - 0.5);
     renderWall();
 }
@@ -1301,6 +1451,8 @@ function startLogicSimulator() {
 
     const simArea = document.getElementById('logic-sim-area');
     simArea.classList.remove('hidden');
+    // Clear standard options during logic lab
+    document.getElementById('options-container').innerHTML = '';
 
     // Generate the Reference Tables HTML
     simArea.innerHTML = `
@@ -1405,7 +1557,557 @@ function startLogicSimulator() {
     ];
 
     currentQuestions = advancedPool.sort(() => 0.5 - Math.random());
+    currentIndex = 0; // Reset index to start from beginning
     nextQuestion();
+}
+
+// --- PARSON'S PUZZLES ENGINE ---
+
+// Standard Puzzles (Sneakier distractors)
+const parsonsBank = {
+    'Basics': [
+        {
+            q: "Construct a program that asks for a name and greets the user.",
+            code: [
+                "name = input('What is your name?')",
+                "print('Hello ' + name)"
+            ],
+            distractors: [
+                "print('Hello' + name)", // Missing space
+                "name = print('What is your name?')" // Logic error
+            ]
+        }
+    ],
+    'If statements': [
+        {
+            q: "Create a program that checks if a user is old enough to drive (17 or older).",
+            code: [
+                "age = int(input('Enter age:'))",
+                "if age >= 17:",
+                "    print('You can drive!')",
+                "else:",
+                "    print('Too young.')"
+            ],
+            distractors: [
+                "if age > 17:", // Logic error (misses exactly 17)
+                "    input('You can drive!')", // Syntax error
+                "else" // Missing colon
+            ]
+        }
+    ],
+    'Strings': [
+        {
+            q: "Ask for a password and output its length.",
+            code: [
+                "pwd = input('Enter password:')",
+                "length = len(pwd)",
+                "print('Length is', length)"
+            ],
+            distractors: [
+                "length = pwd.len()", // Incorrect method call
+                "length = len[pwd]" // Using square brackets
+            ]
+        }
+    ],
+    'Maths': [
+        {
+            q: "Calculate and print the area of a rectangle.",
+            code: [
+                "width = int(input('Width:'))",
+                "length = int(input('Length:'))",
+                "area = width * length",
+                "print(area)"
+            ],
+            distractors: [
+                "area = width + length", // Wrong math operation
+                "width = input('Width:')" // Missing integer cast
+            ]
+        }
+    ],
+    'For loops': [
+        {
+            q: "Write a loop that prints the numbers 1 to 5 (inclusive).",
+            code: [
+                "for i in range(1, 6):",
+                "    print(i)"
+            ],
+            distractors: [
+                "for i in range(1, 5):", // Off-by-one error
+                "    print[i]" // Syntax error
+            ]
+        }
+    ],
+    'While loops': [
+        {
+            q: "Create a loop that keeps asking for a password until it equals 'secret'.",
+            code: [
+                "guess = ''",
+                "while guess != 'secret':",
+                "    guess = input('Password?')"
+            ],
+            distractors: [
+                "while guess == 'secret':", // Logic inverted
+                "while guess != 'secret'" // Missing colon
+            ]
+        }
+    ],
+    'Random': [
+        {
+            q: "Import the random library and simulate rolling a 6-sided die.",
+            code: [
+                "import random",
+                "roll = random.randint(1, 6)",
+                "print(roll)"
+            ],
+            distractors: [
+                "roll = random.randint(1, 7)", // Wrong range
+                "roll = random(1, 6)" // Missing module method
+            ]
+        }
+    ],
+    'Lists': [
+        {
+            q: "Create a list of colours, append 'Yellow', and print the list.",
+            code: [
+                "colours = ['Red', 'Blue', 'Green']",
+                "colours.append('Yellow')",
+                "print(colours)"
+            ],
+            distractors: [
+                "colours.add('Yellow')", // Wrong python method
+                "colours = ('Red', 'Blue', 'Green')" // Tuple instead of list
+            ]
+        }
+    ],
+    'Strings part 2': [
+        {
+            q: "Convert a word to uppercase and print its first letter.",
+            code: [
+                "word = input('Enter word:')",
+                "word = word.upper()",
+                "print(word[0])"
+            ],
+            distractors: [
+                "word = word.upper", // Missing parenthesis
+                "print(word[1])" // Wrong index for first letter
+            ]
+        }
+    ],
+    'Numeric Arrays': [
+        {
+            q: "Calculate the total sum of an array of scores.",
+            code: [
+                "scores = [85, 90, 78]",
+                "total = 0",
+                "for s in scores:",
+                "    total = total + s"
+            ],
+            distractors: [
+                "for s in range(scores):", // Incorrect iteration
+                "    total = total + 1" // Counting instead of summing
+            ]
+        }
+    ],
+    '2D lists': [
+        {
+            q: "Access and print the number 5 from this 3x3 grid.",
+            code: [
+                "grid = [[1, 2, 3],",
+                "        [4, 5, 6],",
+                "        [7, 8, 9]]",
+                "print(grid[1][1])"
+            ],
+            distractors: [
+                "print(grid[2][2])", // Wrong index (0-based)
+                "print(grid[1, 1])" // Wrong 2D access syntax
+            ]
+        }
+    ],
+    'Reading and writing to a text file': [
+        {
+            q: "Open a file called 'scores.txt' and write the word 'Winner'.",
+            code: [
+                "file = open('scores.txt', 'w')",
+                "file.write('Winner')",
+                "file.close()"
+            ],
+            distractors: [
+                "file = open('scores.txt', 'r')", // Wrong mode (read instead of write)
+                "file.write(Winner)" // Missing quotes
+            ]
+        }
+    ],
+    'Subprograms': [
+        {
+            q: "Create a function that adds two numbers and returns the result.",
+            code: [
+                "def add_nums(a, b):",
+                "    ans = a + b",
+                "    return ans"
+            ],
+            distractors: [
+                "function add_nums(a, b):", // JS syntax instead of Python
+                "    print(ans)" // Returning vs Printing
+            ]
+        }
+    ]
+};
+
+// Challenge Puzzles (Faded Inputs - Harder Variants)
+const challengeParsonsBank = {
+    'Basics': [
+        {
+            q: "Fill in the blanks to ask for two numbers, cast them as integers, and output their sum.",
+            code: [
+                "num1 = <input type='text' class='parsons-input' data-answer='int'>(input('Enter first number: '))",
+                "num2 = int(<input type='text' class='parsons-input' data-answer='input'>('Enter second number: '))",
+                "total = num1 <input type='text' class='parsons-input' data-answer='+'> num2",
+                "print('Total is: ' + <input type='text' class='parsons-input' data-answer='str'>(total))"
+            ],
+            distractors: [
+                "total = <input type='text' class='parsons-input' data-answer='int'>(num1) + int(num2)", 
+                "print('Total is: ' <input type='text' class='parsons-input' data-answer='+'> total)",
+                "num2 = <input type='text' class='parsons-input' data-answer='input'>('Enter second number: ')"
+            ]
+        }
+    ],
+    'If statements': [
+        {
+            q: "Fill in the blanks to create an ELIF ladder for grading a test score.",
+            code: [
+                "score = int(input('Score: '))",
+                "if score <input type='text' class='parsons-input' data-answer='>='> 80:",
+                "    print('Distinction')",
+                "<input type='text' class='parsons-input' data-answer='elif'> score >= 60<input type='text' class='parsons-input' data-answer=':'>",
+                "    print('Merit')",
+                "<input type='text' class='parsons-input' data-answer='else'>:",
+                "    print('Fail')"
+            ],
+            distractors: [
+                "<input type='text' class='parsons-input' data-answer='else'> if score >= 60:",
+                "<input type='text' class='parsons-input' data-answer='if'> score >= 60:",
+                "<input type='text' class='parsons-input' data-answer='else'> score < 60:"
+            ]
+        }
+    ],
+    'Strings': [
+        {
+            q: "Fill in the blanks to extract the first 4 letters, and also reverse the entire string.",
+            code: [
+                "word = 'Algorithms'",
+                "prefix = word[<input type='text' class='parsons-input' data-answer='0'>:<input type='text' class='parsons-input' data-answer='4'>]",
+                "reversed_word = word[<input type='text' class='parsons-input' data-answer=':'>:<input type='text' class='parsons-input' data-answer=':'>:<input type='text' class='parsons-input' data-answer='-1'>]",
+                "print(prefix, reversed_word)"
+            ],
+            distractors: [
+                "prefix = word[<input type='text' class='parsons-input' data-answer='1'>:<input type='text' class='parsons-input' data-answer='4'>]",
+                "reversed_word = word[<input type='text' class='parsons-input' data-answer=':'>:<input type='text' class='parsons-input' data-answer=':'>:<input type='text' class='parsons-input' data-answer='-0'>]",
+                "reversed_word = word.<input type='text' class='parsons-input' data-answer='reverse'>()"
+            ]
+        }
+    ],
+    'Maths': [
+        {
+            q: "Fill in the blanks to separate a 2-digit number into its Tens and Units using integer division and modulo.",
+            code: [
+                "num = int(input('Enter a 2-digit number: '))",
+                "tens = num <input type='text' class='parsons-input' data-answer='//'> 10",
+                "units = num <input type='text' class='parsons-input' data-answer='%'> 10",
+                "print('Tens:', tens, 'Units:', units)"
+            ],
+            distractors: [
+                "tens = num <input type='text' class='parsons-input' data-answer='/'> 10",
+                "units = num <input type='text' class='parsons-input' data-answer='//'> 10",
+                "units = num <input type='text' class='parsons-input' data-answer='%'> 100"
+            ]
+        }
+    ],
+    'For loops': [
+        {
+            q: "Fill in the blanks to create a countdown from 10 down to 1 (inclusive) using a step parameter.",
+            code: [
+                "for count in range(<input type='text' class='parsons-input' data-answer='10'>, <input type='text' class='parsons-input' data-answer='0'>, <input type='text' class='parsons-input' data-answer='-1'>):",
+                "    print(count)",
+                "print('Blastoff!')"
+            ],
+            distractors: [
+                "for count in range(<input type='text' class='parsons-input' data-answer='10'>, <input type='text' class='parsons-input' data-answer='1'>, <input type='text' class='parsons-input' data-answer='-1'>):",
+                "for count in range(<input type='text' class='parsons-input' data-answer='10'>, <input type='text' class='parsons-input' data-answer='0'>):",
+                "    print[<input type='text' class='parsons-input' data-answer='count'>]"
+            ]
+        }
+    ],
+    'While loops': [
+        {
+            q: "Fill in the blanks to create a boolean flag loop that validates a password length.",
+            code: [
+                "valid = <input type='text' class='parsons-input' data-answer='False'>",
+                "while <input type='text' class='parsons-input' data-answer='not'> valid:",
+                "    pwd = input('New password: ')",
+                "    if len(pwd) >= 8:",
+                "        valid = <input type='text' class='parsons-input' data-answer='True'>",
+                "    else:",
+                "        print('Too short!')"
+            ],
+            distractors: [
+                "while valid <input type='text' class='parsons-input' data-answer='=='> False:",
+                "while valid <input type='text' class='parsons-input' data-answer='='> False:",
+                "    if pwd.<input type='text' class='parsons-input' data-answer='len'>() >= 8:"
+            ]
+        }
+    ],
+    'Random': [
+        {
+            q: "Fill in the blanks to simulate a 'Guess the Number' game loop.",
+            code: [
+                "import random",
+                "target = random.<input type='text' class='parsons-input' data-answer='randint'>(1, 100)",
+                "guess = 0",
+                "while guess <input type='text' class='parsons-input' data-answer='!='> target:",
+                "    guess = int(input('Guess: '))",
+                "print('You got it!')"
+            ],
+            distractors: [
+                "target = random.<input type='text' class='parsons-input' data-answer='choice'>(1, 100)",
+                "while guess <input type='text' class='parsons-input' data-answer='not'> target:",
+                "    guess = <input type='text' class='parsons-input' data-answer='input'>('Guess: ')"
+            ]
+        }
+    ],
+    'Lists': [
+        {
+            q: "Fill in the blanks to iterate through a list and append only the EVEN numbers to a new list.",
+            code: [
+                "nums = [5, 12, 18, 7, 20]",
+                "evens = <input type='text' class='parsons-input' data-answer='[]'>",
+                "for n in nums:",
+                "    if n % 2 <input type='text' class='parsons-input' data-answer='=='> 0:",
+                "        evens.<input type='text' class='parsons-input' data-answer='append'>(n)",
+                "print(evens)"
+            ],
+            distractors: [
+                "evens = <input type='text' class='parsons-input' data-answer='()'>",
+                "    if n % 2 <input type='text' class='parsons-input' data-answer='='> 0:",
+                "        evens.<input type='text' class='parsons-input' data-answer='add'>(n)"
+            ]
+        }
+    ],
+    'Strings part 2': [
+        {
+            q: "Fill in the blanks to split an email address into username and domain parts.",
+            code: [
+                "email = 'student@school.com'",
+                "parts = email.<input type='text' class='parsons-input' data-answer='split'>(<input type='text' class='parsons-input' data-answer=\"'@'\">)",
+                "user = parts[<input type='text' class='parsons-input' data-answer='0'>]",
+                "domain = parts[<input type='text' class='parsons-input' data-answer='1'>]",
+                "print('Welcome', user)"
+            ],
+            distractors: [
+                "parts = email.<input type='text' class='parsons-input' data-answer='slice'>(<input type='text' class='parsons-input' data-answer=\"'@'\">)",
+                "user = parts[<input type='text' class='parsons-input' data-answer='1'>]",
+                "domain = parts[<input type='text' class='parsons-input' data-answer='2'>]"
+            ]
+        }
+    ],
+    'Numeric Arrays': [
+        {
+            q: "Fill in the blanks to write a linear search finding the MAXIMUM value in an array.",
+            code: [
+                "scores = [45, 78, 92, 34]",
+                "highest = scores[<input type='text' class='parsons-input' data-answer='0'>]",
+                "for s in scores:",
+                "    if s <input type='text' class='parsons-input' data-answer='>'> highest:",
+                "        highest = <input type='text' class='parsons-input' data-answer='s'>",
+                "print('Top score is', highest)"
+            ],
+            distractors: [
+                "highest = <input type='text' class='parsons-input' data-answer='0'>",
+                "    if s <input type='text' class='parsons-input' data-answer='<'> highest:",
+                "        highest = scores[<input type='text' class='parsons-input' data-answer='s'>]"
+            ]
+        }
+    ],
+    '2D lists': [
+        {
+            q: "Fill in the blanks to use nested loops to print every single element in a 2D grid.",
+            code: [
+                "grid = [[1, 2], [3, 4], [5, 6]]",
+                "for row in <input type='text' class='parsons-input' data-answer='range'>(len(grid)):",
+                "    for col in range(len(grid[<input type='text' class='parsons-input' data-answer='row'>])):",
+                "        print(grid[<input type='text' class='parsons-input' data-answer='row'>][<input type='text' class='parsons-input' data-answer='col'>])"
+            ],
+            distractors: [
+                "for row in <input type='text' class='parsons-input' data-answer='len'>(grid):",
+                "        print(grid[<input type='text' class='parsons-input' data-answer='col'>][<input type='text' class='parsons-input' data-answer='row'>])",
+                "    for col in range(<input type='text' class='parsons-input' data-answer='len'>(grid)):"
+            ]
+        }
+    ],
+    'Reading and writing to a text file': [
+        {
+            q: "Fill in the blanks to open a file in APPEND mode and add multiple entries using a loop.",
+            code: [
+                "file = open('log.txt', <input type='text' class='parsons-input' data-answer=\"'a'\">)",
+                "for i in range(3):",
+                "    entry = input('Log: ')",
+                "    file.<input type='text' class='parsons-input' data-answer='write'>(entry + <input type='text' class='parsons-input' data-answer=\"'\\n'\">)",
+                "file.<input type='text' class='parsons-input' data-answer='close'>()"
+            ],
+            distractors: [
+                "file = open('log.txt', <input type='text' class='parsons-input' data-answer=\"'w'\">)",
+                "    file.<input type='text' class='parsons-input' data-answer='append'>(entry + <input type='text' class='parsons-input' data-answer=\"'\\n'\">)",
+                "file.<input type='text' class='parsons-input' data-answer='end'>()"
+            ]
+        }
+    ],
+    'Subprograms': [
+        {
+            q: "Fill in the blanks to create a function that returns True if a number is even, and False otherwise.",
+            code: [
+                "<input type='text' class='parsons-input' data-answer='def'> is_even(number):",
+                "    if number % 2 == 0:",
+                "        <input type='text' class='parsons-input' data-answer='return'> True",
+                "    <input type='text' class='parsons-input' data-answer='return'> False",
+                "result = <input type='text' class='parsons-input' data-answer='is_even'>(15)"
+            ],
+            distractors: [
+                "<input type='text' class='parsons-input' data-answer='function'> is_even(number):",
+                "    <input type='text' class='parsons-input' data-answer='print'>(True)",
+                "result = <input type='text' class='parsons-input' data-answer='call'> is_even(15)"
+            ]
+        }
+    ]
+};
+
+let currentParsonsPuzzle = null;
+
+function showParsonsMenu() {
+    resetState();
+    document.getElementById('parsons-selection-menu').classList.remove('hidden');
+}
+
+function startParsonsPuzzle(topic, isChallenge = false) {
+    const activeBank = isChallenge ? challengeParsonsBank : parsonsBank;
+
+    if (!activeBank[topic] || activeBank[topic].length === 0) {
+        alert("Puzzles for this topic are coming soon!");
+        return;
+    }
+    
+    resetState();
+    document.getElementById('parsons-area').classList.remove('hidden');
+    
+    const displayMode = isChallenge ? "CHALLENGE MODE" : "STANDARD";
+    document.getElementById('parsons-topic-display').innerText = `TOPIC: ${topic.toUpperCase()} [${displayMode}]`;
+    
+    currentParsonsPuzzle = activeBank[topic][0];
+    document.getElementById('parsons-question-text').innerText = currentParsonsPuzzle.q;
+    
+    renderParsonsBlocks();
+}
+
+function renderParsonsBlocks() {
+    const sourceZone = document.getElementById('parsons-source');
+    const solutionZone = document.getElementById('parsons-solution');
+    document.getElementById('parsons-feedback').innerText = '';
+    
+    sourceZone.innerHTML = '';
+    solutionZone.innerHTML = '';
+    
+    let allBlocks = [];
+    currentParsonsPuzzle.code.forEach((line, index) => {
+        allBlocks.push({ id: `correct-${index}`, text: line });
+    });
+    
+    if (currentParsonsPuzzle.distractors) {
+        currentParsonsPuzzle.distractors.forEach((line, index) => {
+            allBlocks.push({ id: `distractor-${index}`, text: line });
+        });
+    }
+    
+    allBlocks.sort(() => Math.random() - 0.5);
+    
+    allBlocks.forEach(block => {
+        const div = document.createElement('div');
+        div.className = 'parsons-block';
+        // We no longer add a visual 'distractor' class so it is entirely hidden from the user
+        div.id = `block-${block.id}`;
+        div.draggable = true;
+        div.ondragstart = drag;
+        // We no longer replace spaces with &nbsp; because it breaks the HTML input tags.
+        // CSS white-space: pre-wrap handles the indentation now.
+        div.innerHTML = block.text; 
+        sourceZone.appendChild(div);
+    });
+}
+
+// --- DRAG AND DROP API ---
+function allowDrop(ev) {
+    ev.preventDefault();
+}
+
+function drag(ev) {
+    ev.dataTransfer.setData("text", ev.target.id);
+}
+
+function drop(ev) {
+    ev.preventDefault();
+    const data = ev.dataTransfer.getData("text");
+    const block = document.getElementById(data);
+    
+    if (ev.target.classList.contains('parsons-dropzone')) {
+        ev.target.appendChild(block);
+    } else if (ev.target.classList.contains('parsons-block')) {
+        ev.target.parentNode.insertBefore(block, ev.target);
+    }
+}
+
+function checkParsonsSolution() {
+    const solutionZone = document.getElementById('parsons-solution');
+    const blocks = solutionZone.querySelectorAll('.parsons-block');
+    const feedback = document.getElementById('parsons-feedback');
+    
+    // Check 1: Block count
+    if (blocks.length !== currentParsonsPuzzle.code.length) {
+        feedback.innerText = "❌ Incorrect number of lines used.";
+        feedback.style.color = "var(--wrong)";
+        return;
+    }
+    
+    // Check 2: Block order
+    let isOrderCorrect = true;
+    blocks.forEach((block, index) => {
+        if (block.id !== `block-correct-${index}`) {
+            isOrderCorrect = false;
+        }
+    });
+
+    // Check 3: Faded Inputs (Challenge Mode)
+    let areInputsCorrect = true;
+    const inputs = solutionZone.querySelectorAll('.parsons-input');
+    inputs.forEach(input => {
+        // .trim() ensures accidental spaces don't trigger a failure
+        if (input.value.trim() !== input.dataset.answer) {
+            areInputsCorrect = false;
+            input.style.borderColor = "var(--wrong)";
+        } else {
+            input.style.borderColor = "var(--correct)";
+        }
+    });
+    
+    // Final Verdict
+    if (isOrderCorrect && areInputsCorrect) {
+        feedback.innerText = "✅ Perfect! Code and syntax are correct.";
+        feedback.style.color = "var(--correct)";
+        totalXP += 150; // Extra XP for the harder challenge!
+        updateGlobalUI();
+    } else if (!isOrderCorrect) {
+        feedback.innerText = "❌ Not quite right. Check your structure and distractors.";
+        feedback.style.color = "var(--wrong)";
+    } else if (!areInputsCorrect) {
+        feedback.innerText = "❌ The blocks are in the right order, but check your typed answers!";
+        feedback.style.color = "var(--wrong)";
+    }
 }
 
 initMenu(); // This must be at the global level
