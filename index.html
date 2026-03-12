@@ -46,6 +46,7 @@
                     <button class="special-btn boss-btn" onclick="showBossDifficulty()">🔥 BINARY BOSS BATTLE</button>
                     <button class="special-btn sim-btn" onclick="startLogicSimulator()">🔌 LOGIC GATE LAB</button>
                     <button class="special-btn p2-btn" onclick="showWallMenu()">🧩 CONNECTING WALLS</button>
+                    <button class="special-btn p1-btn" onclick="showParsonsMenu()">🧩 PARSON'S PUZZLES</button>
                 </div>
             </div>
 
@@ -67,15 +68,78 @@
                 <button class="topic-card p2-card" onclick="startConnectingWall('3.6')">3.6 CYBER SECURITY</button>
                 <button class="topic-card p2-card" onclick="startConnectingWall('3.7')">3.7 DATABASES & SQL</button>
                 <button class="topic-card p2-card" onclick="startConnectingWall('3.8')">3.8 ETHICAL & LEGAL</button>
-
-
             </div>
+            
             <h2 style="color: #ecf0f1; margin-top: 30px;">FULL PAPER MIXES</h2>
             <div class="topic-grid">
                 <button class="topic-card p1-card" onclick="startConnectingWall('PAPER_1')">PAPER 1 MIX</button>
                 <button class="topic-card p2-card" onclick="startConnectingWall('PAPER_2')">PAPER 2 MIX</button>
             </div>
             <button class="leave-btn" style="margin-top:20px" onclick="showMenu()">CANCEL</button>
+        </div>
+
+        <div id="parsons-selection-menu" class="hidden fade-in">
+            <h1>SELECT A PARSON'S PUZZLE</h1>
+            
+            <h2 style="color: #1abc9c;">PYTHON CHALLENGES</h2>
+            <div class="topic-grid">
+                <button class="topic-card p1-card" onclick="startParsonsPuzzle('Basics')">Basics</button>
+                <button class="topic-card p1-card" onclick="startParsonsPuzzle('If statements')">If statements</button>
+                <button class="topic-card p1-card" onclick="startParsonsPuzzle('Strings')">Strings</button>
+                <button class="topic-card p1-card" onclick="startParsonsPuzzle('Maths')">Maths</button>
+                <button class="topic-card p1-card" onclick="startParsonsPuzzle('For loops')">For loops</button>
+                <button class="topic-card p1-card" onclick="startParsonsPuzzle('While loops')">While loops</button>
+                <button class="topic-card p1-card" onclick="startParsonsPuzzle('Random')">Random</button>
+                <button class="topic-card p1-card" onclick="startParsonsPuzzle('Lists')">Lists</button>
+                <button class="topic-card p1-card" onclick="startParsonsPuzzle('Strings part 2')">Strings part 2</button>
+                <button class="topic-card p1-card" onclick="startParsonsPuzzle('Numeric Arrays')">Numeric Arrays</button>
+                <button class="topic-card p1-card" onclick="startParsonsPuzzle('2D lists')">2D lists</button>
+                <button class="topic-card p1-card" onclick="startParsonsPuzzle('Reading and writing to a text file')">Reading & Writing</button>
+                <button class="topic-card p1-card" onclick="startParsonsPuzzle('Subprograms')">Subprograms</button>
+            </div>
+
+            <h2 style="color: #e74c3c; margin-top: 30px;">CHALLENGE PUZZLES</h2>
+            <div class="topic-grid">
+                <button class="topic-card p1-card" style="background: #c0392b; border-bottom: 3px solid #922b21;" onclick="startParsonsPuzzle('Basics', true)">Basics</button>
+                <button class="topic-card p1-card" style="background: #c0392b; border-bottom: 3px solid #922b21;" onclick="startParsonsPuzzle('If statements', true)">If statements</button>
+                <button class="topic-card p1-card" style="background: #c0392b; border-bottom: 3px solid #922b21;" onclick="startParsonsPuzzle('Strings', true)">Strings</button>
+                <button class="topic-card p1-card" style="background: #c0392b; border-bottom: 3px solid #922b21;" onclick="startParsonsPuzzle('Maths', true)">Maths</button>
+                <button class="topic-card p1-card" style="background: #c0392b; border-bottom: 3px solid #922b21;" onclick="startParsonsPuzzle('For loops', true)">For loops</button>
+                <button class="topic-card p1-card" style="background: #c0392b; border-bottom: 3px solid #922b21;" onclick="startParsonsPuzzle('While loops', true)">While loops</button>
+                <button class="topic-card p1-card" style="background: #c0392b; border-bottom: 3px solid #922b21;" onclick="startParsonsPuzzle('Random', true)">Random</button>
+                <button class="topic-card p1-card" style="background: #c0392b; border-bottom: 3px solid #922b21;" onclick="startParsonsPuzzle('Lists', true)">Lists</button>
+                <button class="topic-card p1-card" style="background: #c0392b; border-bottom: 3px solid #922b21;" onclick="startParsonsPuzzle('Strings part 2', true)">Strings part 2</button>
+                <button class="topic-card p1-card" style="background: #c0392b; border-bottom: 3px solid #922b21;" onclick="startParsonsPuzzle('Numeric Arrays', true)">Numeric Arrays</button>
+                <button class="topic-card p1-card" style="background: #c0392b; border-bottom: 3px solid #922b21;" onclick="startParsonsPuzzle('2D lists', true)">2D lists</button>
+                <button class="topic-card p1-card" style="background: #c0392b; border-bottom: 3px solid #922b21;" onclick="startParsonsPuzzle('Reading and writing to a text file', true)">Reading & Writing</button>
+                <button class="topic-card p1-card" style="background: #c0392b; border-bottom: 3px solid #922b21;" onclick="startParsonsPuzzle('Subprograms', true)">Subprograms</button>
+            </div>
+
+            <button class="leave-btn" style="margin-top:30px" onclick="showMenu()">CANCEL</button>
+        </div>
+
+        <div id="parsons-area" class="hidden fade-in">
+            <div id="parsons-topic-display" style="color: #1abc9c; font-weight: bold; margin-bottom: 10px;"></div>
+            <h2 id="parsons-question-text" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px;"></h2>
+            
+            <div class="parsons-layout">
+                <div class="parsons-panel">
+                    <h3>Available Blocks</h3>
+                    <div id="parsons-source" class="parsons-dropzone" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                </div>
+                
+                <div class="parsons-panel">
+                    <h3>Your Solution</h3>
+                    <div id="parsons-solution" class="parsons-dropzone" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+                </div>
+            </div>
+
+            <div id="parsons-feedback" class="wall-feedback"></div>
+            
+            <div id="nav-controls">
+                <button class="leave-btn" onclick="showParsonsMenu()">BACK TO MENU</button>
+                <button class="mock-btn p1-btn" style="padding: 10px 20px;" onclick="checkParsonsSolution()">CHECK CODE</button>
+            </div>
         </div>
 
         <div id="wall-area" class="hidden">
@@ -123,8 +187,8 @@
             <div id="rank-display"></div>
             <button class="mock-btn p1-btn" onclick="showMenu()">RETURN TO MAIN MENU</button>
         </div>
-    </div>
-    <script src="script.js"></script>
+        
+    </div> <script src="script.js"></script>
 </body>
 
 </html>
