@@ -151,9 +151,6 @@ body {
     min-width: 350px;
 }
 
-.game-section button:last-child {
-    grid-column: span 2;
-}
 
 .mock-btn,
 .special-btn {
@@ -451,4 +448,101 @@ body {
 
 @keyframes blink {
     50% { opacity: 0; }
+}
+
+/* --- PARSON'S PUZZLES --- */
+#parsons-area {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+}
+
+#parsons-question-text {
+    width: 100% !important;
+    max-width: 850px !important;
+    margin: 20px auto !important;
+    box-sizing: border-box;
+}
+
+.parsons-layout {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: center !important;
+    gap: 20px !important;
+    width: 100% !important;
+    max-width: 850px !important;
+    margin: 20px auto !important; /* The 'auto' strictly forces it to the middle */
+    box-sizing: border-box;
+}
+
+.parsons-panel {
+    flex: 1 1 0% !important; /* Forces equal 50/50 split no matter the content */
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 15px;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.parsons-panel h3 {
+    margin-top: 0;
+    color: var(--p1-main);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 10px;
+}
+
+.parsons-dropzone {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 5px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 200px;
+}
+
+.parsons-block {
+    background: #2c3e50;
+    color: #ecf0f1;
+    padding: 12px 15px;
+    border-radius: 6px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 1.1rem;
+    cursor: grab;
+    border: 1px solid #34495e;
+    text-align: left;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    user-select: none;
+    /* This preserves spaces for Python indentation */
+    white-space: pre-wrap; 
+}
+
+.parsons-block:active {
+    cursor: grabbing;
+}
+
+/* Styling for the Faded Puzzle text boxes */
+.parsons-input {
+    background: #0f0f1b;
+    color: #f1c40f;
+    border: 1px solid #7f8c8d;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 1.1rem;
+    min-width: 50px;
+    max-width: 150px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.parsons-input:focus {
+    outline: none;
+    border-color: #1abc9c;
+    background: #1e272e;
 }
